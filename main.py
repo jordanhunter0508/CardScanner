@@ -16,10 +16,7 @@ usbCamera = UsbCamera()
 
 #         if points is not None:
 #             points = usbCamera.order_points(points)
-#             print(f"Ordered points: {points}")
-
 #             card = usbCamera.get_card(raw_image, points)
-
 #             card = cv2.resize(card, (366,512))
 #             cv2.imshow("Card", card)
         
@@ -38,7 +35,6 @@ usbCamera = UsbCamera()
 
 
 
-
 # If no camera is connected 
 try:
     raw_image = cv2.imread("sample_card.jpg")
@@ -47,14 +43,13 @@ try:
 
     if points is not None:
         points = usbCamera.order_points(points)
-        print(f"Ordered points: {points}")
-
         card = usbCamera.get_card(raw_image, points)
-
         card = cv2.resize(card, (366,512))
         cv2.imshow("Card", card)
         cv2.waitKey(0)
         cv2.destroyAllWindows()
+    else:
+        print("The card could not be found.")
     
 except Exception as e:
     print("An error occured: ", e)

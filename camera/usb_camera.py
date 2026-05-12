@@ -1,10 +1,11 @@
 import cv2
 import numpy as np
+from collections.abc import Sequence
 from .camera import Camera
 
 class UsbCamera(Camera):
 
-    def _find_best_contour(self,contours):
+    def _find_best_contour(self,contours: Sequence[cv2.typing.MatLike]) -> cv2.typing.MatLike|None:
         """
         Finds the contour that matches set
         aspect ratios best that has 4 corners.
@@ -14,6 +15,7 @@ class UsbCamera(Camera):
         ASPECT_HORIZONTAL = 5/7
         ASPECT_VERTICAL = 7/5
         ASPECT_TOLERANCE = .2
+        AREA_THRESHOLD = 20000
 
         best_area = 0           # current best area (helps find the best contour)
         best_contour = None     # results
@@ -24,13 +26,13 @@ class UsbCamera(Camera):
             approx = cv2.approxPolyDP(contour, 0.02 * perimeter, True)
 
             # Checks if the countour has 4 sides
-            if len(approx) !=4:
+            if len(approx) != 4:
                 continue
 
             # Checks to see if the contour is the main one 
             # taking up most of the picture
             area = cv2.contourArea(approx)
-            if area < 20000:
+            if area < AREA_THRESHOLD:
                 continue
 
             # Checks if the aspect ratio of the card
@@ -52,9 +54,9 @@ class UsbCamera(Camera):
             
         return best_contour
 
-    def connect_carmera(self, camera_number):
+    def connect_camera(self, camera_number: int) -> cv2.VideoCapture:
         """
-        Implements Camer.connect_camera(self,camera_number)
+        Implements Camera.connect_camera(self, camera_number)
         """
 
         # Check the type of camera_number
@@ -68,9 +70,9 @@ class UsbCamera(Camera):
         
         return camera
 
-    def capture_image(self, camera):
+    def capture_image(self, camera: cv2.VideoCapture) -> cv2.typing.MatLike:
         """
-        Implements Camera.caputre_image(self,camera)
+        Implements Camera.capture_image(self, camera)
         """
 
         if not isinstance(camera,cv2.VideoCapture):
@@ -83,14 +85,21 @@ class UsbCamera(Camera):
         
         return image
     
-    def prepare_image(self, image):
+    def prepare_image(self, image: cv2.typing.MatLike) -> cv2.typing.MatLike:
         """
-        Implements Camera.prepared_image(self, image)
+        Implements Camera.prepare_image(self, image)
         """
+
+        #Constant Variables
+        GAUSSIAN_SIZE = (5,5)               # Increase to cause more blur and reduce noise
+        CANNY_MIN_THRESH = 50               # Decrease to help find more corners in the resulted image
+        CANNY_MAX_THRESH = 150              # Decrease to help reduce the number of corners in the resulted image
+        DILATED_KERNEL_SIZE = (3,3)         # Increasing the size increases the thickness of the dilation
+        ITERATION_COUNT = 2                 # Number of times dilate runs
 
         # Checks the type of the image
         if not isinstance(image, np.ndarray):
-            raise TypeError("Inputted image must be a NumPyArray.")
+            raise TypeError("Inputted image must be a NumPy array.")
         
         # Checks if the image needs to be changed to gray
         if image.ndim == 3:
@@ -101,37 +110,37 @@ class UsbCamera(Camera):
         else:
             grey = image.copy()
 
-        blur = cv2.GaussianBlur(grey,(5,5),0)
-        canny = cv2.Canny(blur,50,150)                          # Thresholds might be to high
+        blur = cv2.GaussianBlur(grey,GAUSSIAN_SIZE,0)
+        canny = cv2.Canny(blur,CANNY_MIN_THRESH,CANNY_MAX_THRESH)
 
         
         # Connect edges
-        kernel = np.ones((3, 3), np.uint8)                      # Increasing the matrix size increases thickness
-        dilated = cv2.dilate(canny, kernel, iterations=2)       # Might chanage back to 1 iteration if the edges connect to much
+        kernel = np.ones(DILATED_KERNEL_SIZE, np.uint8)
+        dilated = cv2.dilate(canny, kernel, iterations=ITERATION_COUNT)
 
         return dilated
     
-    def find_card(self, image):
+    def find_card(self, image: cv2.typing.MatLike) -> cv2.typing.MatLike | None:
         """
-        Implements Camera.prepared_image(self, image)
+        Implements Camera.find_card(self, image)
         """
         # Checks the type of the image
         if not isinstance(image, np.ndarray):
-            raise TypeError("Inputted image must be a NumPyArray.")
+            raise TypeError("Inputted image must be a NumPy array.")
         
         contours, _ = cv2.findContours(image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE )
         result_contour = self._find_best_contour(contours)
 
         return result_contour
 
-    def order_points(self, points):
+    def order_points(self, points: np.ndarray) -> np.ndarray:
         """
         Implements Camera.order_points(self, points)
         """
 
         # Checks if points are a numpy array
-        if not isinstance(points,np.ndarray):
-            raise TypeError("Inputted points must be a NumPyArray.")
+        if not isinstance(points, np.ndarray):
+            raise TypeError("Inputted points must be a NumPy array.")
 
         # Checks if the input needs to be resized
         if points.shape == (4,1,2):
@@ -154,14 +163,22 @@ class UsbCamera(Camera):
 
         return rect
 
-    def get_card(self, image, points):
+    def get_card(self, image: cv2.typing.MatLike, points: np.ndarray) -> cv2.typing.MatLike:
         """
-        Implements Camera.get_card(self, points)
+        Implements Camera.get_card(self, image, points)
         """
 
-        # Checks if points are a numpy array
-        if not isinstance(points,np.ndarray):
-            raise TypeError("Inputted points must be a NumPyArray.")
+        # Check if points is an array
+        if not isinstance(points, np.ndarray):
+            raise TypeError("Inputted points must be a NumPy array.")
+
+        # Check if points is of data type float 32
+        if points.dtype != np.float32:
+            raise TypeError("Points array must have dtype float32.")
+
+        # Check if image is an array
+        if not isinstance(image, np.ndarray):
+            raise TypeError("Inputted image must be a NumPy array.")
         
         # verify the points are ordered
         rect = self.order_points(points)

@@ -3,25 +3,25 @@ This interface can be used to capture an image
 and process the image to display a single card
 """
 import numpy as np
-
+import cv2
 from abc import ABC, abstractmethod
 
 class Camera(ABC):
 
     @abstractmethod
-    def connect_carmera(self, camera_number):
+    def connect_camera(self, camera_number: int) -> cv2.VideoCapture:
         """
         Establishes a camera connection
 
         Args:
-            carmera_number: The number of the camera the user wants to use.
+            camera_number: The number of the camera the user wants to use.
         
         Returns:
             A cv2.VideoCapture object
         """
 
     @abstractmethod
-    def capture_image(self, camera):
+    def capture_image(self, camera: cv2.VideoCapture) -> cv2.typing.MatLike:
         """
         Take a picture using the connected camera
         Keeps the standard size
@@ -35,7 +35,7 @@ class Camera(ABC):
         pass
 
     @abstractmethod
-    def prepare_image(self, image):
+    def prepare_image(self, image: cv2.typing.MatLike) -> cv2.typing.MatLike:
         """
         Converts the image grayscale and blurs the image
         to get ready for processing
@@ -49,7 +49,7 @@ class Camera(ABC):
         pass
     
     @abstractmethod
-    def find_card(self, image):
+    def find_card(self, image: cv2.typing.MatLike) -> cv2.typing.MatLike | None:
         """
         Finds the edges of the cards with canny
 
@@ -62,7 +62,7 @@ class Camera(ABC):
         pass
 
     @abstractmethod
-    def order_points(self, points):
+    def order_points(self, points: np.ndarray) -> np.ndarray:
         """
         Orders the points from top-left, top-right,
         bottom-right, bottom-left
@@ -76,13 +76,13 @@ class Camera(ABC):
         pass
 
     @abstractmethod
-    def get_card(self, image, points):
+    def get_card(self, image: cv2.typing.MatLike, points: np.ndarray) -> cv2.typing.MatLike:
         """
         Uses the coordinates to find and return
         the image of a card
         
         Args: 
-            image: orignial image taken from capture_image-
+            image: original image taken from capture_image
             points: NumPy array of where the card is located.
 
         Returns:
